@@ -1,118 +1,128 @@
 <?php
 session_start();
 if (! isset($_SESSION['user'])) {
-	header("Location: main.php");
+    header("Location: main.php");
 }
 
 include 'config.php';
-	class Main {
-	public $pid;
-		function executeworker() {
-			$this->getpid();
-			switch(True):
-			case (isset($_POST['startservice'])):
-				if ($this->pid == '') {
-					exec("php worker.php scan 60 > /dev/null &");
-				}
-				break;
-			case (isset($_POST['stopservice'])):
-				if ($this->pid != '') {
-					exec("kill -9 $this->pid");
-					$this->clearpid();
-				}
-				break;
-			case (isset($_POST['updatedb'])):
-				if (! $this->pid) {
-					exec("php worker.php updatedb > /dev/null &");
-					sleep(5);
-					$this->clearpid();
-				}
-				break;
-			default:
-				break;
-		endswitch;
-		}
+class Main {
+    public $pid;
 
-		function getpid() {
-			$query = mysql_query("SELECT pid FROM worker_status");
-			while($getpid = mysql_fetch_assoc($query)) {
-				break;
-			}
-			$this->pid = $getpid['pid'];
-		}
+    function executeworker() {
+        $this->getpid();
 
-		function clearpid() { 
-			mysql_query("DELETE FROM worker_status");
-			}
+        switch(True):
+            case (isset($_POST['startservice'])):
+                if ($this->pid == '') {
+                    exec("php worker.php scan 60 > /dev/null &");
+                }
+                break;
 
-	function changepass() {
-		$old = mysql_real_escape_string(stripslashes(sha1($_POST['oldpass']))); // input encrypted oldpassword, dengan filter sqlinjection
-		$new = mysql_real_escape_string(stripslashes(sha1($_POST['newpass']))); // input encrypted newpassword, dengan filter sqlinjection
-		$retype = mysql_real_escape_string(stripslashes(sha1($_POST['retype']))); // input encrypted retype password, dengan filter sqlinjection
-		$sql = mysql_fetch_row(mysql_query("SELECT password FROM users WHERE username='admin'")); // old password dari database
-		switch(True):
-			case ($sql[0] != $old): // old password matching dengan yang ada di dalam database
-				echo "<script>alert('password yang dimasukkan salah')</script>";
-				break;
-			case ($new != $retype): // new password matching dengan retype
-				echo "<script>alert('password yang dimasukkan tidak sama')</script>";
-				break;
-			case ($sql[0] == $new): // password matching, jika password sama dengan yang lama
-				echo "<script>alert('Password yang dimasukkan sama dengan yang lama')</script>";
-				break;
-			default:
-				mysql_query("UPDATE users SET password='$new' WHERE username='admin'"); // update database ketika semua exception terpenuhi
-				echo "<script>alert('berhasil di update')</script>";
-				break;
-		endswitch;
-	}
+            case (isset($_POST['stopservice'])):
+                if ($this->pid != '') {
+                    exec("kill -9 $this->pid");
+                    $this->clearpid();
+                }
+                break;
 
-	function mailer() {
-		$email = mysql_real_escape_string(stripslashes($_POST['email']));
-		if (preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/" , $email)) {
-			mysql_query("UPDATE users SET email='$email' WHERE username='admin'");
-			echo "<script>alert('success')</script>";
-		}
-	}
+            case (isset($_POST['updatedb'])):
+                if (! $this->pid) {
+                    exec("php worker.php updatedb > /dev/null &");
+                    sleep(5);
+                    $this->clearpid();
+                }
+                break;
+
+            default:
+                break;
+        endswitch;
+    }
+
+    function getpid() {
+        $query = mysql_query("SELECT pid FROM worker_status");
+        while($getpid = mysql_fetch_assoc($query)) {
+            break;
+        }
+        $this->pid = $getpid['pid'];
+    }
+
+    function clearpid() {
+        mysql_query("DELETE FROM worker_status");
+    }
+
+    function changepass() {
+        $old = mysql_real_escape_string(stripslashes(sha1($_POST['oldpass'])));   // input encrypted oldpassword + sanitaze
+        $new = mysql_real_escape_string(stripslashes(sha1($_POST['newpass'])));   // input encrypted newpassword + sanitaze
+        $retype = mysql_real_escape_string(stripslashes(sha1($_POST['retype']))); // input encrypted retype password + sanitaze
+        $sql = mysql_fetch_row(mysql_query("SELECT password FROM users WHERE username='admin'")); // old password dari database
+
+        switch(True):
+            case ($sql[0] != $old): // old password matching dengan yang ada di dalam database
+                echo "<script>alert('password yang dimasukkan salah')</script>";
+                break;
+
+            case ($new != $retype): // new password matching dengan retype
+                echo "<script>alert('password yang dimasukkan tidak sama')</script>";
+                break;
+
+            case ($sql[0] == $new): // password matching, jika password sama dengan yang lama
+                echo "<script>alert('Password yang dimasukkan sama dengan yang lama')</script>";
+                break;
+
+            default:
+                // update database ketika semua exception terpenuhi
+                mysql_query("UPDATE users SET password='$new' WHERE username='admin'");
+                echo "<script>alert('berhasil di update')</script>";
+                break;
+        endswitch;
+    }
+
+    function mailer() {
+        $email = mysql_real_escape_string(stripslashes($_POST['email']));
+        if (preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/" , $email)) {
+            mysql_query("UPDATE users SET email='$email' WHERE username='admin'");
+            echo "<script>alert('success')</script>";
+        }
+    }
 }
 
 $main = new Main();
 $main->executeworker();
 if (isset($_POST['gantipassword'])) {
-	$main->changepass();
+    $main->changepass();
 }
 if (isset($_POST['append'])) {
-	$main->mailer();
+    $main->mailer();
 }
 if (isset($_POST['logout'])) {
-	session_destroy();
-	header("Location: http://localhost/vuln/login.php");
+    session_destroy();
+    header("Location: http://localhost/vuln/login.php");
 }
 ?>
-       <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-       <html>
-       <head>
-        <title>vuln</title>
-        <link rel="stylesheet" type="text/css" href="style/style.css">
-        <script type="text/javascript">
-        function animate_tab(menuId) {
-          var no_of_tabs = 3+1;
-          for(i = 1; i < no_of_tabs; i++) {
-            menu_id = "menu-0"+i.toString();
-            tab_id  = "tab-0"+i.toString();
-            if(menu_id == menuId) {
-              document.getElementById(menu_id).className  = 'selected';
-              document.getElementById(tab_id).style.display = 'block';
-          }
-          else {
-              document.getElementById(menu_id).className  = 'unselected';
-              document.getElementById(tab_id).style.display = 'none';
-          }
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>vuln</title>
+  <link rel="stylesheet" type="text/css" href="style/style.css">
+  <script type="text/javascript">
+  function animate_tab(menuId) {
+    var no_of_tabs = 3+1;
+
+    for(i = 1; i < no_of_tabs; i++) {
+      menu_id = "menu-0"+i.toString();
+      tab_id  = "tab-0"+i.toString();
+
+      if(menu_id == menuId) {
+        document.getElementById(menu_id).className  = 'selected';
+        document.getElementById(tab_id).style.display = 'block';
+      } else {
+        document.getElementById(menu_id).className  = 'unselected';
+        document.getElementById(tab_id).style.display = 'none';
       }
+    }
   }
   </script>
 </head>
-
 <body background="images/bg-tile.gif">
     <center><img src="images/head-vuln.gif" alt="head-vuln" width="200" height="80"></center>
     <div id="tab-menu">
@@ -147,9 +157,9 @@ if (isset($_POST['logout'])) {
 </table>
 </div>
 
-<div id="detected-file">  
+<div id="detected-file">
     <table id="background-image">
-      <thead>  	     	
+      <thead>
         <tr>
           <th class="no_size">No.</th>
           <th class="file_size">Filename</th>
@@ -159,10 +169,10 @@ if (isset($_POST['logout'])) {
   </thead>
 </table>
 
-<div style="overflow-y:auto; width:817px; height: 120px; background-color: #D89ED8;">  
+<div style="overflow-y:auto; width:817px; height: 120px; background-color: #D89ED8;">
   <table style="table-layout:fixed" id="background-image">
     <tbody>
-      <?php 
+      <?php
       $tables = mysql_query("SELECT nama_file, md5sum, date_time FROM detected_files ORDER BY date_time DESC LIMIT 0,25");
       static $nomor = 1;
       while($row = mysql_fetch_array($tables)) {
@@ -205,7 +215,7 @@ if (isset($_POST['logout'])) {
 <div id="update-file">
 
     <table id="background-image">
-      <thead>  
+      <thead>
         <tr>
           <th class="no_size">No.</th>
           <th class="file_size">MD5 sum</th>
@@ -214,7 +224,7 @@ if (isset($_POST['logout'])) {
   </thead>
 </table>
 
-<div style="overflow-y:auto; width:817px; height: 120px; background-color: #D89ED8;">  
+<div style="overflow-y:auto; width:817px; height: 120px; background-color: #D89ED8;">
   <table style="table-layout:fixed" id="background-image">
     <tbody>
       <?php
@@ -231,7 +241,7 @@ if (isset($_POST['logout'])) {
     ?>
 </tbody>
 </table>
-</div>  
+</div>
 
 
 </div>
@@ -240,7 +250,7 @@ if (isset($_POST['logout'])) {
 
 <div id="last-login">
     <table id="background-image">
-      <thead>  
+      <thead>
         <tr>
           <th class="no_size">No.</th>
           <th class="ip_size">IP Address</th>
@@ -250,7 +260,7 @@ if (isset($_POST['logout'])) {
   </thead>
 </table>
 
-<div style="overflow-y:auto; width:817px; height: 90px; background-color: #D89ED8;">  
+<div style="overflow-y:auto; width:817px; height: 90px; background-color: #D89ED8;">
   <table style="table-layout:fixed" id="background-image">
     <tbody>
       <?php
@@ -286,7 +296,7 @@ if (isset($_POST['logout'])) {
       </tr>
       <td class="set2">New password : </td><td class="set2"><input type="password" name="newpass" value="new-pasword"/></td>
       <tr>
-          <td class="set2">Retype Password : </td><td class="set2"><input type="password" name="retype" value="retype-pasword"/></td> 
+          <td class="set2">Retype Password : </td><td class="set2"><input type="password" name="retype" value="retype-pasword"/></td>
       </tr>
       <tr>
           <td></td><td><input class="bstyle" type="submit" name="gantipassword" value="Apply"/></td>
@@ -313,9 +323,9 @@ if (isset($_POST['logout'])) {
 </div>
 <form name="button_logoun" method="post" action="<?php echo htmlentities($_SERVER['PHP_SELF']); ?>">
 <table>
-	<tr><td>
-		<input type="submit" value="logout" name="logout">
-	</tr></td>
+  <tr><td>
+    <input type="submit" value="logout" name="logout">
+  </tr></td>
 </table>
 </form>
 </div>

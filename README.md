@@ -1,4 +1,4 @@
 mfd
 ===
 
-modified files detection, just for fun :D
+modified files detector, just for fun :D
